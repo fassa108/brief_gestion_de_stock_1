@@ -1,9 +1,10 @@
 import mysql.connector
-
+import hashlib
+import getpass
 connexion = mysql.connector.connect(
     host="localhost",
-    user="",
-    password="",
+    user="root",
+    password="Binetougueye@2",
     database="gestion_stock"
 )
 
@@ -13,16 +14,14 @@ if connexion :
 
 
 
-
-
 def demander_entier(message):
     while True :
         valeur = input (message)
         try :
-            if valeur >= 0 :
+            if int(valeur) >= 0 :
                 return int(valeur)
         except (ValueError,TypeError) as e :
-            print("Vous devez saisir un nombre entier!!!")
+            print("Vous devez saisir un nombre entier positif!!!")
 
 
 def demander_decimal(message):
@@ -43,6 +42,64 @@ def demander_chaine_non_vide(message) :
             print("Vous ne devez pas ecrire uniquement des chiffres!!!")
         else :
             return valeur
+def demander_mdp(message) :
+    while True :
+        valeur = getpass.getpass((message)).strip()
+        if valeur == "" :
+            print("Le champs ne peut pas etre vide!!!")
+        
+        else :
+            return valeur
+
+
+
+def ajout_utlisateur() :
+    print('~'*8,"Ajout d'utilisateur",'~'*8)
+    nom = demander_chaine_non_vide("Veuillez saisir votre nom : ")
+    prenom = demander_chaine_non_vide("Veuillez saisir votre prenom : ")
+    email = demander_chaine_non_vide("Veuillez saisir votre adresse email : ")
+    mot_de_passe = demander_mdp("Veuillez saisir votre mot de passe : ")
+    mot_de_passe = hashlib.sha256(mot_de_passe.encode()).hexdigest()
+    requete = """INSERT INTO utilisateurs (nom,prenom,email, mot_de_passe) VALUES (%s, %s, %s, %s)"""
+
+    with connexion.cursor() as curseur :
+        curseur.execute(requete,(nom,prenom,email,mot_de_passe))
+        connexion.commit()
+        print("Utilisateur ajoute avec succes!")
+
+
+
+def se_connecter() :
+    while True :
+        email_saisi = demander_chaine_non_vide("Veuillez saisir votre email : ")
+        mdp_saisi = demander_mdp("Veuillez saisir votre mot de passe : ")
+        requete = """SELECT * FROM utilisateurs WHERE email = %s"""
+        with connexion.cursor() as curseur :
+            curseur.execute(requete,(email_saisi,))
+            resultat = curseur.fetchone()
+            if resultat is not None :
+                mdp_hash = hashlib.sha256(mdp_saisi.encode()).hexdigest()
+                if mdp_hash != resultat[4] :
+                    print("Email ou mot de passe incorrecte!!!")
+                else :
+                    profil_user = resultat[5]
+                    menu_principal(resultat)
+            else :
+                print("Email ou mot de passe incorrecte!!!")
+
+    
+
+def authentification_par_action(id) :
+    requete = """SELECT profil FROM utilisateurs WHERE id = %s"""
+    with connexion.cursor() as curseur :
+        curseur.execute(requete,(id,))
+        profil = curseur.fetchone()
+        if profil == 'admin' :
+
+            return True
+        else :
+            return False
+
 
 
 
@@ -74,6 +131,8 @@ def modification_categorie() :
                 curseur.execute(query,(nouveau_nom_categorie,choix))
                 connexion.commit()
                 print("La categorie a ete modifiee avec succes!")
+        else :
+            print("Cette categorie n'existe pas!!!")
 
 def affichage_categorie():
     print('Liste des categories : ')
@@ -85,7 +144,7 @@ def affichage_categorie():
             for categorie in liste_categorie : 
                 print(f"ID : {categorie[0]} | Nom : {categorie[1]}")
         else : 
-            print("Cette categorie n'existe pas")
+            print("Pas de categorie pour le moment")
     return liste_categorie
 
 def supprime_categorie() :
@@ -182,10 +241,10 @@ def rechercher_produit() :
 def afficher_p_plus_cher() :
     requete1 = """SELECT p.*, c.libelle FROM produits p JOIN categories c ON p.id_categorie = c.id ORDER BY prix DESC LIMIT 1"""
  
-    with connexion.cursor(dictionary=True) as curseur1 :
+    with connexion.cursor() as curseur1 :
         curseur1.execute(requete1)
         produit_cher = curseur1.fetchone()
-
+        
         print('~'*8,"Le produit le plus cher",'~'*8)
         print(f"ID : {produit_cher[0]} | libelle : {produit_cher[1]} | prix : {produit_cher[2]} | quantite : {produit_cher[3]} | categorie : {produit_cher[5]}")
         print('~'*70)
@@ -250,8 +309,7 @@ def effectuer_vente() :
                             curseur.execute(requete_vente,(id_produit,quantite))
                             curseur.execute(requete_produit,(quantite_restant,id_produit))
                             connexion.commit()
-                            print("La vente a ete effectuer avec succes!!")
-                
+                            print("La vente a ete effectuer avec succes!!")        
                
         else : 
             print("Aucun produit pour le moment")
@@ -275,80 +333,136 @@ def afficher_liste_vente() :
 
 
 
+def menu_connexion() :
+    while True :
+
+        print("Veuillez taper ")
+        print("1 . Connexion")
+        print("2 . Inscription")
+        print("0 . Quitter la programme")
+        choix_saisi = demander_entier("\t : ")
+        
+        match choix_saisi :
+            case 1 :
+                user = se_connecter()
+            case 2:
+                ajout_utlisateur()
+            case 0 :
+                exit()
 
 
 
 
+def menu_principal(utilisateur):
+    id = utilisateur[0]
+    print("\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print("\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print("\t\t GESTION DE STOCK")
+    print("\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print("\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    
 
-
-
-print("\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-print("\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-print("\t\t GESTION DE PRESENCE")
-print("\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-print("\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-while True :
-    choix = input("Veuillez faire un choix selon ce que vous voulez faire : "
-        "\n1 - Ajouter une categorie" 
-        "\n2 - modifier une categorie" 
-        "\n3 - supprimer une categorie"
-        "\n4 - Afficher la listes des categories"
-        "\n5 - Ajouter un produit"
-        "\n6 - Afficher la liste des produits" \
-        "\n7 - Modifier la quantite d'un produit" 
-        "\n8 - Supprimer un produit" \
-        "\n9 - Rechercher un produit"
-        "\n10 - Voir le Dashboard" \
-        "\n11 - Effectuer une vente " \
-        "\n12 - Afficher la liste des ventes"
-        "\n13 - Quitter \n"
-        "=========================================\n\t : ")
-    if choix.isdigit() :
-        choix = int(choix)
+    while True :
+        print("Veuillez faire un choix selon ce que vous voulez faire : ")
+        print("1 - Afficher la liste des produits") 
+        print("2 - Rechercher un produit") 
+        print("3 - Effectuer un achat")
+        if utilisateur[5] == 'admin':
+            print("4 - Voire la liste des categories")
+            print("5 - Ajouter une categorie")
+            print("6 - modifier une categorie")
+            print("7 - supprimer une categorie") 
+            print("8 - ajouter un produit")
+            print("9 - Modifier la quantite d'un produit")
+            print("10 - Supprimer un produit")
+            print("11 - Voir la liste des ventes") 
+            print("12 - afficher le dashboard") 
+            print("13 - ajouter un utilisateur")
+        print("0 - Quitter \n","="*30)
+        choix = demander_entier("\n\t : ")
+        
         match choix:
+            
             case 1:
-                ajout_categorie()
+                afficher_produit()
                 
                 
             case 2:
-                modification_categorie()
+                rechercher_produit()
             
             
             case 3:
-                supprime_categorie()
+                effectuer_vente()
                 
             case 4:
-                affichage_categorie()
                 
+                if authentification_par_action(id) :
+                    affichage_categorie()
+                else :
+                    print("Vous n'etes pas autoriser a effectuer cette action!!!")
+
             case 5:
-                ajout_produit()
+                if authentification_par_action(id) :
+                    ajout_categorie()
+                else :
+                    print("Vous n'etes pas autoriser a effectuer cette action!!!")
             
             case 6:
-                afficher_produit()
+                if authentification_par_action(id) :
+                    modification_categorie()
+                else :
+                    print("Vous n'etes pas autoriser a effectuer cette action!!!")
             
             case 7:
-                modifier_qte_produit()
+                if authentification_par_action(id) :
+                    supprime_categorie()
+                else :
+                    print("Vous n'etes pas autoriser a effectuer cette action!!!")
 
             case 8:
-                supprimer_produit()
+                if authentification_par_action(id) :
+                    ajout_produit()
+                else :
+                    print("Vous n'etes pas autoriser a effectuer cette action!!!")
 
             case 9:
-                rechercher_produit()
+                if authentification_par_action(id) :
+                    modifier_qte_produit()
+                else :
+                    print("Vous n'etes pas autoriser a effectuer cette action!!!")
 
             case 10:
-                dashboard()
+                if authentification_par_action(id) :
+                    supprimer_produit()
+                else :
+                    print("Vous n'etes pas autoriser a effectuer cette action!!!")
 
             case 11:
-                effectuer_vente()
+                if authentification_par_action(id) :
+                    afficher_liste_vente()
+                else :
+                    print("Vous n'etes pas autoriser a effectuer cette action!!!")
 
             case 12:
-                afficher_liste_vente()
+                if authentification_par_action(id) :
+                    dashboard()
+                else :
+                    print("Vous n'etes pas autoriser a effectuer cette action!!!")
 
             case 13 :
-                exit
+                if authentification_par_action(id) :
+                    ajout_utlisateur()
+                else :
+                    print("Vous n'etes pas autoriser a effectuer cette action!!!")
+            
+            case 0:
+                    menu_connexion()
 
             case _:
                 print("Choix invalide")
 
-    else :
-        print("Erreur! Votre choix doit etre un nombre entier : ")
+        
+
+
+
+menu_connexion()

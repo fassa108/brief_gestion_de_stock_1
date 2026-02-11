@@ -3,6 +3,8 @@ programme de gestion de stock avec mini dash board.
 Ce programme a ete ecrit en python et la persistance des donnees avec mysql
 
 ## Les principales fonctionnlites 
+- ajout d'un utilisateur(pour admin) ou inscription pour tous
+- Authentification par profil : l'utilisateur simple n'a acces qu'a liste des produits, la recherche de produit et effectuer un achat
 - l'ajout de categorie
 - L'affichage de la liste des categories
 - La modiffication d'une categorie
