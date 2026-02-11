@@ -2,8 +2,8 @@ import mysql.connector
 
 connexion = mysql.connector.connect(
     host="localhost",
-    user="root",
-    password="Binetougueye@2",
+    user="",
+    password="",
     database="gestion_stock"
 )
 
@@ -15,8 +15,34 @@ if connexion :
 
 
 
+def demander_entier(message):
+    while True :
+        valeur = input (message)
+        try :
+            if valeur >= 0 :
+                return int(valeur)
+        except (ValueError,TypeError) as e :
+            print("Vous devez saisir un nombre entier!!!")
 
 
+def demander_decimal(message):
+    while True :
+        valeur = input (message)
+        try :
+            return float(valeur)
+        except (ValueError,TypeError) as e :
+            print("Vous devez saisir un nombre entier ou decimal!!!")
+
+
+def demander_chaine_non_vide(message) :
+    while True :
+        valeur = input(message).strip()
+        if valeur == "" :
+            print("Le champs ne peut pas etre vide!!!")
+        elif valeur.isdigit() :
+            print("Vous ne devez pas ecrire uniquement des chiffres!!!")
+        else :
+            return valeur
 
 
 
@@ -24,7 +50,7 @@ if connexion :
 def ajout_categorie() :
     print('~'*8,"Ajout de categorie",'~'*8)
     while True :
-        nom = input("Veuillez entrer le libelle de la categorie : ")
+        nom = demander_chaine_non_vide("Veuillez entrer le libelle de la categorie : ")
         if nom.isdigit() : 
             print("Attention le nom ne doit pas etre des chiffres!!!")
         else : 
@@ -38,11 +64,11 @@ def ajout_categorie() :
 
 def modification_categorie() :
     liste_categorie = affichage_categorie()
-    choix = input("Veuillez saisir l'id de la categorie que vous voulez modifier : ")
-    choix = int(choix)
+    choix = demander_entier("Veuillez saisir l'id de la categorie que vous voulez modifier : ")
+    # choix = int(choix)
     for categorie in liste_categorie :
         if categorie[0] == choix :
-            nouveau_nom_categorie = input("Veuillez sasir le nom de la nouvelle categorie : ")
+            nouveau_nom_categorie = demander_chaine_non_vide("Veuillez sasir le nom de la nouvelle categorie : ")
             with connexion.cursor() as curseur :
                 query = """UPDATE  categories SET libelle = %s WHERE id = %s"""
                 curseur.execute(query,(nouveau_nom_categorie,choix))
@@ -65,7 +91,7 @@ def affichage_categorie():
 def supprime_categorie() :
     liste_categorie = affichage_categorie()
     while True :
-        id = input("Veuillez saisir l' id de la categorie que vous voulez supprimer : ")
+        id = demander_entier("Veuillez saisir l' id de la categorie que vous voulez supprimer : ")
         if id.isdigit() :
             id = int(id)
             for categorie in liste_categorie :
@@ -83,11 +109,11 @@ def supprime_categorie() :
 def ajout_produit() :
     print('~'*8,"Ajout d'un produit",'~'*8)
     while True :
-        libelle = input("Veuillez saisir le libelle du produit : ")
-        prix = int(input("Veuillez sisir le prix du produit : "))
-        quantite = int(input("Veuillez saisir la quantite du produit : "))
+        libelle = demander_chaine_non_vide("Veuillez saisir le libelle du produit : ")
+        prix = demander_decimal("Veuillez sisir le prix du produit : ")
+        quantite = demander_entier("Veuillez saisir la quantite du produit : ")
         liste_categorie = affichage_categorie()
-        id_cat = int(input("Veuillez saisir l'id de la categorie correspondante : "))
+        id_cat = demander_entier("Veuillez saisir l'id de la categorie correspondante : ")
 
         with connexion.cursor() as curseur :
             requete = """INSERT INTO produits (nom,prix,quantite,id_categorie) VALUES (%s, %s, %s, %s)"""
@@ -112,14 +138,14 @@ def afficher_produit() :
 
 def modifier_qte_produit():
     liste_produit = afficher_produit()
-    id_produit_saisi = int(input("Veuilles choisir l'id du produit dont vous voulez modifier la quantite : "))
+    id_produit_saisi = demander_entier("Veuilles choisir l'id du produit dont vous voulez modifier la quantite : ")
     for produit in liste_produit :
         if id_produit_saisi == produit[0] :
-            new_quantite = float(input("Veuillez saisir la nouvelle quantite : "))
+            new_quantite = demander_entier("Veuillez saisir la nouvelle quantite : ")
             
             with connexion.cursor() as curseur :
-                requete = """UPDATE produits SET quantite = %s """
-                curseur.execute(requete,(new_quantite,))
+                requete = """UPDATE produits SET quantite = %s WHERE id = %s"""
+                curseur.execute(requete,(new_quantite,id_produit_saisi))
                 print("La quantite a ete modifiee avec succees!")
         else : 
             print("Le produit n'existe pas")
@@ -128,7 +154,7 @@ def modifier_qte_produit():
 def supprimer_produit() :
     liste_produit = afficher_produit()
 
-    id_produit = int(input("Veuillez saisir l'id du produit que vous voulez supprimer : "))
+    id_produit = demander_entier("Veuillez saisir l'id du produit que vous voulez supprimer : ")
     
     for produit in liste_produit :
         if id_produit == produit[0] :
@@ -141,7 +167,7 @@ def supprimer_produit() :
             print("Le produit n'existe pas")
 
 def rechercher_produit() :
-    mot_cle = input('Veuillez saisir le libelle du produit a rechercher : ')
+    mot_cle = demander_chaine_non_vide('Veuillez saisir le libelle du produit a rechercher : ').strip()
     with connexion.cursor() as curseur :
         mot_cle = f"%{mot_cle}%"
         requete = """SELECT p.*,c.libelle FROM produits p JOIN categories c ON p.id_categorie = c.id WHERE  nom LIKE %s"""
@@ -156,7 +182,7 @@ def rechercher_produit() :
 def afficher_p_plus_cher() :
     requete1 = """SELECT p.*, c.libelle FROM produits p JOIN categories c ON p.id_categorie = c.id ORDER BY prix DESC LIMIT 1"""
  
-    with connexion.cursor() as curseur1 :
+    with connexion.cursor(dictionary=True) as curseur1 :
         curseur1.execute(requete1)
         produit_cher = curseur1.fetchone()
 
@@ -209,11 +235,11 @@ def effectuer_vente() :
             for produit in liste_produit :
                 print(f"ID : {produit[0]} | libelle : {produit[1]} | prix : {produit[2]} | quantite : {produit[3]} | categorie : {produit[5]}")
 
-            id_produit = int(input("Veuillez saisir l'id du produit que vous voulez acheter : "))
+            id_produit = demander_entier("Veuillez saisir l'id du produit que vous voulez acheter : ")
 
             for produit in liste_produit :
                 if id_produit == produit[0] :
-                    quantite = float(input("Veuillez sasir la quantite souhaite : "))
+                    quantite = demander_entier("Veuillez sasir la quantite souhaite : ")
                     if quantite > produit[3] :
                         produit("Le stock est insuffisant pour cet achat!!!")
                     else :
